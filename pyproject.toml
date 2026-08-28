@@ -1,0 +1,24 @@
+[build-system]
+build-backend = "uv_build"
+requires = [ "uv_build >= 0.12, < 0.13" ]
+
+[project]
+description = "Alphabetically sort TOML tables"
+dynamic = [ "version" ]
+license = "MIT"
+license-files = [ "LICENSE" ]
+name = "toml-table-sort"
+readme = "README.md"
+requires-python = ">= 3.14"
+
+[project.urls]
+repository = "https://github.com/C6H5-NO2/toml-table-sort.git"
+
+[tool.pyrefly]
+preset = "strict"
+
+[tool.ruff]
+line-length = 320
+
+[tool.ruff.format]
+quote-style = "single"
