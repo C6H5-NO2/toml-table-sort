@@ -1,21 +1,38 @@
 [build-system]
 build-backend = "uv_build"
-requires = [ "uv_build >= 0.12, < 0.13" ]
+requires = [ "uv_build>=0.12,<0.13" ]
+
+[dependency-groups]
+test = [
+  "pytest~=9.1",
+]
 
 [project]
+classifiers = [
+  "Development Status :: 2 - Pre-Alpha",
+]
 description = "Alphabetically sort TOML tables"
 dynamic = [ "version" ]
 license = "MIT"
 license-files = [ "LICENSE" ]
 name = "toml-table-sort"
 readme = "README.md"
-requires-python = ">= 3.14"
+requires-python = ">=3.14"
 
 [project.urls]
 repository = "https://github.com/C6H5-NO2/toml-table-sort.git"
 
 [tool.pyrefly]
 preset = "strict"
+
+[tool.pyrefly.errors]
+redefinition = "ignore"
+
+[tool.pytest]
+addopts = [ "--import-mode=importlib" ]
+pythonpath = [ "src" ]
+strict = true
+testpaths = [ "tests" ]
 
 [tool.ruff]
 line-length = 320
