@@ -39,3 +39,8 @@ line-length = 320
 
 [tool.ruff.format]
 quote-style = "single"
+
+[tool.ruff.lint]
+ignore = [
+  "SIM102",
+]

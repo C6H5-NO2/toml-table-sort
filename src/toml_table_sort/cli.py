@@ -2,10 +2,15 @@ import sys
 from argparse import OPTIONAL, ArgumentParser, Namespace, RawDescriptionHelpFormatter
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from os.path import abspath, exists, isfile
+from os.path import abspath, exists, isfile, samefile
+from shutil import copyfile
 from typing import Final, Literal, LiteralString, Protocol
 
+from .external_formatter import run_formatter
+from .table_sorter import sort_tables
 from .version import NAME, VERSION
+
+_MAX_READ_SIZE: Final[int] = 1 << 22
 
 _TAPLO_CLI: Final[LiteralString] = 'taplo'
 
@@ -285,9 +290,58 @@ def parse_cli_args() -> CliArgs:
     parser = ArgvParser()
     args = parser.parse_argv()
     args = CliArgs(**vars(args))
-    # print(args)
     return args
 
 
+def main():
+    parser = ArgvParser()
+    args = parser.parse_argv()
+    taplo = bool(args.taplo)
+    args = CliArgs(**vars(args))
+    stdio = args.input == 0
+
+    if not stdio and taplo:
+        if not exists(args.output) or not samefile(args.input, args.output):
+            copyfile(args.input, args.output)  # type: ignore
+
+    if args.formatter:
+        formatter_args = [args.formatter]
+        if args.formatter_args:
+            formatter_args.extend(args.formatter_args)
+        stdout = run_formatter(
+            args=formatter_args,
+            stdio=stdio,
+            env=args.formatter_env,
+        )
+
+    if stdio:
+        if args.formatter:
+            toml: bytes = stdout  # type: ignore
+        else:
+            if 'buffer' in dir(sys.stdin):
+                toml = sys.stdin.buffer.read(_MAX_READ_SIZE)
+            else:
+                toml = sys.stdin.read(_MAX_READ_SIZE).encode()
+    else:
+        if taplo:
+            file = args.output
+        else:
+            file = args.input
+        with open(file, 'rb') as fp:
+            toml = fp.read(_MAX_READ_SIZE)
+
+    toml = sort_tables(toml)
+
+    if stdio:
+        if 'buffer' in dir(sys.stdout):
+            sys.stdout.buffer.write(toml)
+        else:
+            sys.stdout.write(toml.decode())
+    else:
+        with open(args.output, 'wb') as fp:
+            fp.write(toml)
+
+
 if __name__ == '__main__':
-    parse_cli_args()
+    sys.tracebacklimit = 0
+    main()
