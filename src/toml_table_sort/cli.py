@@ -1,11 +1,22 @@
 import sys
 from argparse import OPTIONAL, ArgumentParser, Namespace, RawDescriptionHelpFormatter
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
+from os.path import abspath, exists, isfile
 from typing import Final, Literal, LiteralString, Protocol
 
 from .version import NAME, VERSION
 
 _TAPLO_CLI: Final[LiteralString] = 'taplo'
+
+_DEFAULT_TAPLO_OPTIONS: Final[Sequence[tuple[str, str]]] = [
+    ('align_comments', 'false'),
+    ('array_auto_collapse', 'false'),
+    ('compact_arrays', 'false'),
+    ('reorder_keys', 'true'),
+    ('reorder_arrays', 'false'),
+    ('reorder_inline_tables', 'true'),
+]
 
 
 class _Args(Protocol):
@@ -63,7 +74,7 @@ class ArgvParser:
         if args.input == '-' and not (args.output is None or args.output == '-'):
             self._parser.error('argument output: required to be stdout when argument input is stdin')
 
-        if args.input != '-' and args.output is None and not args.force:
+        if args.input != '-' and (args.output is None or args.output == args.input) and not args.force:
             self._parser.error('argument --force: required when argument output is not specified')
 
         if args.no_formatter and args.taplo:
@@ -160,6 +171,123 @@ class ArgvParser:
         return k, v
 
 
+@dataclass(frozen=True, kw_only=True)
+class CliArgs:
+    input: str | Literal[0]
+    output: str | Literal[1]
+    force: bool
+    formatter: str | None
+    formatter_args: Sequence[str] | None
+    formatter_env: Mapping[str, str] | None
+    newline: Literal['\n', '\r\n']
+
+    def __init__(
+        self,
+        *,
+        input: str,
+        output: str | None = None,
+        force: bool = False,
+        newline: Literal['LF', 'CRLF'] = 'LF',
+        formatter: str | None = None,
+        no_formatter: bool = False,
+        taplo: bool = False,
+        option: Sequence[tuple[str, str]] | None = None,
+        formatter_args: Sequence[str] | None = None,
+        formatter_env: Mapping[str, str] | None = None,
+    ):
+        if input == '-':
+            object.__setattr__(self, 'input', 0)
+            object.__setattr__(self, 'output', 1)
+        else:
+            object.__setattr__(self, 'input', input)
+            output = self._get_output(input, output, force)
+            object.__setattr__(self, 'output', output)
+
+        object.__setattr__(self, 'force', force)
+
+        if no_formatter:
+            formatter = None
+            formatter_args = None
+            formatter_env = None
+        elif taplo:
+            if not formatter:
+                formatter = _TAPLO_CLI
+            if not formatter_args:
+                formatter_args = self._get_taplo_args(
+                    option if option else [],
+                    '-' if self.output == 1 else self.output,
+                )
+            if not formatter_env:
+                formatter_env = self._get_taplo_env()
+        object.__setattr__(self, 'formatter', formatter)
+        object.__setattr__(self, 'formatter_args', formatter_args)
+        object.__setattr__(self, 'formatter_env', formatter_env)
+
+        match newline:
+            case 'CRLF':
+                newline: str = '\r\n'
+            case _:
+                newline: str = '\n'
+        object.__setattr__(self, 'newline', newline)
+
+    @staticmethod
+    def _get_output(
+        input: str,
+        output: str | None,
+        force: bool,
+    ) -> str:
+        if not input or not isfile(input):
+            raise FileNotFoundError(input)
+
+        if not input.endswith('.toml'):
+            raise TypeError(input)
+
+        if output:
+            if exists(output):
+                if isfile(output):
+                    if not force:
+                        raise FileExistsError(output)
+                else:
+                    raise IsADirectoryError(output)
+        else:
+            output = input
+            if not force:
+                raise FileExistsError(output)
+
+        return output
+
+    @staticmethod
+    def _get_taplo_args(
+        option: Sequence[tuple[str, str]],
+        file: str,
+    ) -> list[str]:
+        args = [
+            'format',
+            '--no-auto-config',
+        ]
+        options = dict([*_DEFAULT_TAPLO_OPTIONS, *option])
+        for k, v in options.items():
+            args.append('--option')
+            args.append(f'{k}={v}')
+        if file != '-':
+            file = abspath(file)
+        args.append(file)
+        return args
+
+    @staticmethod
+    def _get_taplo_env() -> dict[str, str]:
+        return {
+            'RUST_LOG': 'error',
+        }
+
+
+def parse_cli_args() -> CliArgs:
+    parser = ArgvParser()
+    args = parser.parse_argv()
+    args = CliArgs(**vars(args))
+    # print(args)
+    return args
+
+
 if __name__ == '__main__':
-    args = ArgvParser().parse_argv()
-    print(args)
+    parse_cli_args()
