@@ -23,16 +23,23 @@ Output:
 ## Usage
 
 ```
-usage: cli.py input [output] [options] [-- <external-formatter-args>...]
+usage: python -m toml_table_sort.cli input [output] [options] [-- <external-formatter-args>...]
 
 positional arguments:
-  input
-  output
+  input                 read from this TOML file, or - for stdin
+  output                write to this TOML file (default: input); mutually exclusive with stdin
 
 options:
-  -h, --help
-  -f, --force
-  --formatter [FORMATTER]
-  --newline {lf,crlf}
-  --version
+  -h, --help            show this help message and exit
+  --version             show program's version number and exit
+  -f, --force           allow to overwrite existing files
+  --newline {LF,CRLF}   specify the line endings of output (default: LF)
+  --formatter FORMATTER
+                        specify the external formatter (default: taplo)
+  --no-formatter        skip external formatting
+  --taplo               use bundled taplo config (default: !--formatter && !--no-formatter)
+  --option KEY=VALUE    override taplo options; require --taplo; see
+                        https://github.com/tamasfe/taplo/blob/master/site/site/configuration/formatter-options.md
+
+  -- args...            pass these arguments to the external formatter; mutually exclusive with --taplo
 ```
