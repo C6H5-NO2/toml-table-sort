@@ -1,3 +1,4 @@
+import re
 import sys
 from argparse import OPTIONAL, ArgumentParser, Namespace, RawDescriptionHelpFormatter
 from collections.abc import Mapping, Sequence
@@ -331,6 +332,14 @@ def main():
             toml = fp.read(_MAX_READ_SIZE)
 
     toml = sort_tables(toml)
+
+    match args.newline:
+        case '\n':
+            toml = toml.replace(b'\r\n', b'\n')
+        case '\r\n':
+            toml = re.sub(rb'(?<!\r)\n', b'\r\n', toml)
+        case _:
+            raise ValueError(args.newline)
 
     if stdio:
         if 'buffer' in dir(sys.stdout):
