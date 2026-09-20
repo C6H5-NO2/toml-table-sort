@@ -9,7 +9,7 @@ test = [
 
 [project]
 classifiers = [
-  "Development Status :: 2 - Pre-Alpha",
+  "Development Status :: 3 - Alpha",
 ]
 description = "Alphabetically sort TOML tables"
 dynamic = [ "version" ]
