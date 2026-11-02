@@ -29,7 +29,7 @@ colour = "orange"
 ## Usage
 
 ```
-usage: python -m toml_table_sort.cli input [output] [options] [-- <external-formatter-args>...]
+usage: python -m toml_table_sort input [output] [options] [-- <external-formatter-args>...]
 
 positional arguments:
   input                 read from this TOML file, or - for stdin
