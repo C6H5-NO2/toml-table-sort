@@ -298,7 +298,21 @@ def main():
     parser = ArgvParser()
     args = parser.parse_argv()
     taplo = bool(args.taplo)
-    args = CliArgs(**vars(args))
+    try:
+        args = CliArgs(**vars(args))
+    except FileNotFoundError as exc:
+        detail = f'input file not found: {exc}'
+    except TypeError as exc:
+        detail = f'input is not a TOML file: {exc}'
+    except FileExistsError as exc:
+        detail = f'output file exists (use --force to overwrite): {exc}'
+    except IsADirectoryError as exc:
+        detail = f'output is a directory: {exc}'
+    else:
+        detail = ''
+    if detail:
+        print(f'error: {detail}', file=sys.stderr)
+        raise SystemExit(2) from None
     stdio = args.input == 0
 
     if not stdio and taplo:
